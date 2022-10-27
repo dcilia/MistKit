@@ -8,6 +8,10 @@ public enum MKValue: Codable, Equatable {
   case double(Double)
   case location(MKLocation)
   case asset(MKAsset)
+  case stringList([String])
+  case int64List([Int64])
+  case dateList([Date])
+
 
   public enum CodingKeys: String, CodingKey {
     case value
@@ -15,75 +19,84 @@ public enum MKValue: Codable, Equatable {
   }
 
   // swiftlint:disable:next function_body_length cyclomatic_complexity
-  public init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: MKValue.CodingKeys.self)
-
-    let fieldType = try container.decode(MKFieldType.self, forKey: .type)
-
-    switch fieldType {
-    case .string:
-      self = try .string(container.decode(String.self, forKey: .value))
-
-    case .bytes:
-      let base64Encoded = try container.decode(String.self, forKey: .value)
-      guard let data = Data(base64Encoded: base64Encoded) else {
-        throw DecodingError.dataCorruptedError(
-          forKey: .value,
-          in: container,
-          debugDescription: "Invalid Base64 String."
-        )
-      }
-      self = .data(data)
-
-    case .integer:
-
-      let integer: Int64
-      do {
-        integer = try container.decode(Int64.self, forKey: .value)
-      } catch {
-        let string = try container.decode(String.self, forKey: .value)
-        guard let intstr = Int64(string) else {
-          throw error
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: MKValue.CodingKeys.self)
+        
+        let fieldType = try container.decode(MKFieldType.self, forKey: .type)
+        
+        switch fieldType {
+        case .string:
+            self = try .string(container.decode(String.self, forKey: .value))
+            
+        case .bytes:
+            let base64Encoded = try container.decode(String.self, forKey: .value)
+            guard let data = Data(base64Encoded: base64Encoded) else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .value,
+                    in: container,
+                    debugDescription: "Invalid Base64 String."
+                )
+            }
+            self = .data(data)
+            
+        case .integer:
+            
+            let integer: Int64
+            do {
+                integer = try container.decode(Int64.self, forKey: .value)
+            } catch {
+                let string = try container.decode(String.self, forKey: .value)
+                guard let intstr = Int64(string) else {
+                    throw error
+                }
+                integer = intstr
+            }
+            self = .integer(integer)
+            
+        case .timestamp:
+            let integer: Int64
+            do {
+                integer = try container.decode(Int64.self, forKey: .value)
+            } catch {
+                let string = try container.decode(String.self, forKey: .value)
+                guard let intstr = Int64(string) else {
+                    throw error
+                }
+                integer = intstr
+            }
+            let millisecondsSince = TimeInterval(integer)
+            self = .date(Date(timeIntervalSince1970: millisecondsSince / 1_000.0))
+            
+        case .double:
+            let double: Double
+            do {
+                double = try container.decode(Double.self, forKey: .value)
+            } catch {
+                let string = try container.decode(String.self, forKey: .value)
+                guard let strdbl = Double(string) else {
+                    throw error
+                }
+                double = strdbl
+            }
+            self = .double(double)
+            
+        case .location:
+            let location = try container.decode(MKLocation.self, forKey: .value)
+            self = .location(location)
+            
+        case .asset:
+            let asset = try container.decode(MKAsset.self, forKey: .value)
+            self = .asset(asset)
+        case .stringList:
+            let list = try container.decode([String].self, forKey: .value)
+            self = .stringList(list)
+        case .dateList:
+            let list = try container.decode([Date].self, forKey: .value)
+            self = .dateList(list)
+        case .integerList:
+            let list = try container.decode([Int64].self, forKey: .value)
+            self = .int64List(list)
         }
-        integer = intstr
-      }
-      self = .integer(integer)
-
-    case .timestamp:
-      let integer: Int64
-      do {
-        integer = try container.decode(Int64.self, forKey: .value)
-      } catch {
-        let string = try container.decode(String.self, forKey: .value)
-        guard let intstr = Int64(string) else {
-          throw error
-        }
-        integer = intstr
-      }
-      let millisecondsSince = TimeInterval(integer)
-      self = .date(Date(timeIntervalSince1970: millisecondsSince / 1_000.0))
-
-    case .double:
-      let double: Double
-      do {
-        double = try container.decode(Double.self, forKey: .value)
-      } catch {
-        let string = try container.decode(String.self, forKey: .value)
-        guard let strdbl = Double(string) else {
-          throw error
-        }
-        double = strdbl
-      }
-      self = .double(double)
-
-    case .location:
-      let location = try container.decode(MKLocation.self, forKey: .value)
-      self = .location(location)
-
-    case .asset:
-      let asset = try container.decode(MKAsset.self, forKey: .value)
-      self = .asset(asset)
-    }
   }
 
   public func encode(to encoder: Encoder) throws {
@@ -116,6 +129,15 @@ public enum MKValue: Codable, Equatable {
     case let .asset(asset):
       try container.encode(asset, forKey: .value)
       try container.encode(MKFieldType.asset, forKey: .type)
+    case .stringList(let list):
+        try container.encode(list, forKey: .value)
+        try container.encode(MKFieldType.stringList, forKey: .type)
+    case .int64List(let list):
+        try container.encode(list, forKey: .value)
+        try container.encode(MKFieldType.integerList, forKey: .type)
+    case .dateList(let list):
+        try container.encode(list, forKey: .value)
+        try container.encode(MKFieldType.dateList, forKey: .type)
     }
   }
 }

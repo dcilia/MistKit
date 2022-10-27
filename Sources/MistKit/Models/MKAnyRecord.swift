@@ -182,6 +182,36 @@ public extension MKAnyRecord {
       throw MKDecodingError.invalidKey(key)
     }
   }
+
+    func stringList(fromKey key: String) throws -> [String] {
+        
+        switch fields[key] {
+        case .stringList(let s):
+            return s
+        default:
+            throw MKDecodingError.invalidKey(key)
+        }
+    }
+    
+    func int64List(fromKey key: String) throws -> [Int64] {
+        
+        switch fields[key] {
+        case .int64List(let s):
+            return s
+        default:
+            throw MKDecodingError.invalidKey(key)
+        }
+    }
+    
+    func dateList(fromKey key: String) throws -> [Date] {
+        
+        switch fields[key] {
+        case .dateList(let s):
+            return s
+        default:
+            throw MKDecodingError.invalidKey(key)
+        }
+    }
 }
 
 public extension Array where Element == MKAnyRecord {
